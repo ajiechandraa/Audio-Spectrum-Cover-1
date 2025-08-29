@@ -1,0 +1,16 @@
+# requirements.txt - Dependencies for Glass Card Audio Spectrum Visualizer
+
+# Core numerical and scientific computing library
+numpy
+
+# For plotting, rendering visuals, and creating the animation
+matplotlib
+
+# Scientific computing, used for image/signal filtering (e.g., gaussian_filter)
+scipy
+
+# The primary library for audio analysis (loading, STFT, dB conversion, etc.)
+librosa
+
+# For creating a user-friendly progress bar during video rendering
+tqdm
