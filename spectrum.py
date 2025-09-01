@@ -19,7 +19,7 @@ from tqdm import tqdm
 from config import SETTINGS
 import subprocess
 from typing import Sequence, Any
-import random # <--- TAMBAHKAN BARIS INI
+import random
 
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning)
@@ -185,7 +185,7 @@ class GlassCardSpectrumVisualizer:
         self.spectrum_heights = np.zeros(self.cfg_get('LINE_SPECTRUM_POINTS', 128))
         self.shake_magnitude = 0.0
         self.border_glow_alpha = 0.0
-        self.last_shake_offset = (0, 0) # <--- BARU: Untuk menyimpan posisi getaran sebelumnya
+        self.last_shake_offset = (0, 0)
 
     def _update_frame(self, frame_num) -> Sequence[Artist]:
         t = frame_num / self.cfg_get('FPS', 60)
@@ -222,55 +222,44 @@ class GlassCardSpectrumVisualizer:
         self.line_spectrum.set_ydata(y_data)
     
     def _update_bass_effects(self, bass_val, t):
-        # Memicu efek saat bass terdeteksi
         if bass_val > self.cfg_get('BASS_THRESHOLD', 0.6):
             if self.cfg_get('ENABLE_BASS_SHAKE', True):
                 self.shake_magnitude = self.cfg_get('SHAKE_INTENSITY', 15)
             if self.cfg_get('ENABLE_BORDER_GLOW', True):
                 self.border_glow_alpha = 1.0
         
-        # Meredam magnitudo efek seiring waktu
         self.shake_magnitude *= self.cfg_get('SHAKE_DECAY', 0.75)
         self.border_glow_alpha *= self.cfg_get('BORDER_GLOW_DECAY', 0.90)
         
-        # Logika untuk getaran latar belakang
         if self.cfg_get('ENABLE_BASS_SHAKE', True) and hasattr(self, 'main_bg_artist'):
             offset_x, offset_y = 0, 0
             shake_style = self.cfg_get('SHAKE_STYLE', 'jolt')
 
-            if self.shake_magnitude > 0.1: # Hanya goyang jika ada energi
+            if self.shake_magnitude > 0.1:
                 if shake_style == 'jolt':
-                    # Gaya JOLT: Hentakan acak, terasa lebih seperti getaran
                     offset_x = random.uniform(-self.shake_magnitude, self.shake_magnitude)
                     offset_y = random.uniform(-self.shake_magnitude, self.shake_magnitude)
-                else: # 'smooth' atau default
-                    # Gaya SMOOTH: Gerakan sinusoidal yang lama
+                else:
                     freq_x = self.cfg_get('SHAKE_FREQUENCY_X', 25.0) * 2 * math.pi
                     freq_y = self.cfg_get('SHAKE_FREQUENCY_Y', 30.0) * 2 * math.pi
                     offset_x = self.shake_magnitude * math.sin(t * freq_x)
                     offset_y = self.shake_magnitude * math.cos(t * freq_y)
 
-            # Terapkan motion blur jika diaktifkan
             enable_blur = self.cfg_get('ENABLE_MOTION_BLUR', True)
             if enable_blur and hasattr(self, 'blur_bg_artist'):
-                # Gunakan offset DARI FRAME SEBELUMNYA untuk 'jejak' blur
                 prev_x, prev_y = self.last_shake_offset
                 blur_transform = transforms.Affine2D().translate(prev_x, prev_y)
                 self.blur_bg_artist.set_transform(self.ax.transData + blur_transform)
                 
-                # Atur transparansi blur berdasarkan intensitas getaran
                 blur_alpha = self.cfg_get('MOTION_BLUR_ALPHA', 0.4)
                 blur_intensity = min(1.0, self.shake_magnitude / self.cfg_get('SHAKE_INTENSITY', 15))
                 self.blur_bg_artist.set_alpha(blur_intensity * blur_alpha)
 
-            # Terapkan transformasi ke latar belakang utama
             transform = transforms.Affine2D().translate(offset_x, offset_y)
             self.main_bg_artist.set_transform(self.ax.transData + transform)
             
-            # Simpan offset saat ini untuk digunakan di frame berikutnya (untuk blur)
             self.last_shake_offset = (offset_x, offset_y)
 
-        # Logika untuk glow pada border
         if self.cfg_get('ENABLE_BORDER_GLOW', True):
             self.border_glow.set_alpha(self.border_glow_alpha)
 
@@ -279,7 +268,7 @@ class GlassCardSpectrumVisualizer:
         if hasattr(self, 'main_bg_artist'):
             artists.append(self.main_bg_artist)
         if hasattr(self, 'blur_bg_artist') and self.cfg_get('ENABLE_MOTION_BLUR', True):
-            artists.append(self.blur_bg_artist) # <--- TAMBAHKAN ARTIST BLUR
+            artists.append(self.blur_bg_artist)
         if hasattr(self, 'border_glow') and self.cfg_get('ENABLE_BORDER_GLOW', True):
             artists.append(self.border_glow)
         return artists
@@ -293,15 +282,34 @@ class GlassCardSpectrumVisualizer:
             
         ani = animation.FuncAnimation(self.fig, self._update_frame, frames=total_frames, interval=1000/self.cfg_get('FPS', 60), blit=True)
         
+        # --- LOGIKA BARU UNTUK MEMILIH RENDERER ---
+        renderer_choice = self.cfg_get('RENDERER', 'cpu')
+        video_codec = ''
+        render_desc = ''
+
+        if renderer_choice.lower() == 'gpu':
+            video_codec = self.cfg_get('VIDEO_CODEC_GPU', 'h264_nvenc')
+            render_desc = f"   GPU Render ({video_codec})"
+            print(f"   ⚙️  Renderer set to GPU. Using codec: {video_codec}")
+        else: # Mencakup 'cpu', 'auto', atau nilai lain yang tidak valid
+            video_codec = self.cfg_get('VIDEO_CODEC_CPU', 'libx264')
+            render_desc = f"   CPU Render ({video_codec})"
+            if renderer_choice.lower() == 'auto':
+                print(f"   ⚙️  Renderer set to Auto. Defaulting to CPU codec: {video_codec}")
+            else:
+                print(f"   ⚙️  Renderer set to CPU. Using codec: {video_codec}")
+        # --- AKHIR LOGIKA BARU ---
+
         try:
-            print("   1/2: Rendering Video Frames (using CPU)...")
+            print("   1/2: Rendering Video Frames...")
             writer = animation.FFMpegWriter(
                 fps=self.cfg_get('FPS', 60),
-                codec=self.cfg_get('VIDEO_CODEC', 'libx264'),
-                bitrate=self.cfg_get('BITRATE', 8000),
+                codec=video_codec,  # <-- MENGGUNAKAN CODEC YANG DIPILIH
+                bitrate=self.cfg_get('BITRATE', 12000),
                 extra_args=['-pix_fmt', 'yuv420p']
             )
-            with tqdm(total=total_frames, desc="   CPU Render", unit="frame") as pbar:
+            # Menggunakan deskripsi render yang dinamis
+            with tqdm(total=total_frames, desc=render_desc, unit="frame") as pbar:
                 ani.save(temp_video_file, writer=writer, progress_callback=lambda i, n: pbar.update(1))
             
             print("   ✅ Video frames rendered successfully.")
@@ -323,9 +331,13 @@ class GlassCardSpectrumVisualizer:
             print(f"\n❌ An error occurred during video creation: {e}")
             if isinstance(e, subprocess.CalledProcessError):
                 print("   FFmpeg Error Output:", e.stderr)
+                if 'h264_nvenc' in str(e.stderr):
+                     print("\n   💡 TIPS: Error 'h264_nvenc' biasanya berarti driver NVIDIA tidak terinstall dengan benar,")
+                     print("      atau Anda tidak memiliki GPU NVIDIA. Coba ubah 'RENDERER' ke 'cpu' di config.py.")
             return False
             
         finally:
             if os.path.exists(temp_video_file):
                 os.remove(temp_video_file)
+
 # --- END OF FILE spectrum.py ---

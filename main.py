@@ -15,8 +15,8 @@ def print_banner():
     banner = """
     ╔══════════════════════════════════════════════════════════════╗
     ║                                                              ║
-    ║      🎵 AUDIO SPECTRUM VISUALIZER 🎵                       ║
-    ║                 Versi Final & Robust                        ║
+    ║           🎵 AUDIO SPECTRUM VISUALIZER 🎵                   ║
+    ║                     Orion Grove                              ║
     ║                                                              ║
     ╚══════════════════════════════════════════════════════════════╝
     """

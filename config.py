@@ -11,7 +11,7 @@ SETTINGS = {
     'BITRATE': 12000,
     
     # ==================== PENGATURAN RENDERER (BARU) ====================
-    'RENDERER': 'auto',             # Pilihan: 'auto', 'gpu', 'cpu'
+    'RENDERER': 'gpu',             # Pilihan: 'auto', 'gpu', 'cpu'
     'VIDEO_CODEC_CPU': 'libx264',   # Codec untuk CPU
     'VIDEO_CODEC_GPU': 'h264_nvenc',# Codec untuk NVIDIA GPU (pastikan driver terinstall)
 
@@ -33,10 +33,10 @@ SETTINGS = {
     'GRADIENT_COLOR_TOP': '#000000c0',
     
     # ==================== EFEK BORDER GLOW ====================
-    'ENABLE_BORDER_GLOW': True,
-    'BORDER_GLOW_WIDTH': 4,
-    'BORDER_GLOW_COLOR': '#ffffff',
-    'BORDER_GLOW_DECAY': 0.90,
+    'ENABLE_BORDER_GLOW': True,   
+    'BORDER_GLOW_WIDTH': 4,             # tebal border
+    'BORDER_GLOW_COLOR': '#ffffff',   # warna border
+    'BORDER_GLOW_DECAY': 0.70,          # Waktu border memudar 
     
     # ==================== SPEKTRUM GARIS (Gaya Solid) ====================
     'LINE_SPECTRUM_POINTS': 128,
@@ -73,8 +73,8 @@ SETTINGS = {
     'ENABLE_CARD_PULSE': False,
     
     # Deteksi Bass
-    'BASS_FREQUENCY_CUTOFF': 150,
-    'BASS_THRESHOLD': 0.6,
+    'BASS_FREQUENCY_CUTOFF': 300,
+    'BASS_THRESHOLD': 0.8,
     
     # ==================== TEKS & METADATA ====================
     'TEXT_MARGIN_X': 0.08,
